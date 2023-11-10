@@ -1,31 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:agora_chat_sdk/agora_chat_sdk.dart';
 
-final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
-    GlobalKey<ScaffoldMessengerState>();
+var appKey = "611053209#1230707";
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  ChatOptions options = ChatOptions(appKey: appKey, autoLogin: false);
+  await ChatClient.getInstance.init(options);
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
+  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
-      scaffoldMessengerKey: scaffoldMessengerKey,
       theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFECE5DD),
+        primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Agora Chat Quickstart'),
+      home: const MyHomePage(title: 'Flutter SDK Demo'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  const MyHomePage({Key? key, required this.title}) : super(key: key);
 
   final String title;
 
@@ -34,173 +36,17 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  static const String appKey = "611053209#1230707";
-  static const String userId = "nhat2";
-  String token =
-      "007eJxTYFh91tCOz9W4K8H1kWLtv6NPwt9Kvt6wKZO/ZEXE4uDD+m4KDAZJJuYmRuapqebGxiYmhuaJlgZpaUZGySappsbmSQYWrSE+qQ2BjAwN67yZGBlYGRiBEMRXYTAxt0wyTTMy0DVPTTLUNTRMTdVNsjQ20TU3Nk1KMTBKNkwyNAMAGz0mBQ==";
+  ScrollController scrollController = ScrollController();
+  String _userId = "";
+  String _password = "";
+  String _messageContent = "";
+  String _chatId = "";
+  final List<String> _logText = [];
 
   @override
   void initState() {
     super.initState();
-    setupChatClient();
-    setupListeners();
-  }
-
-  void setupChatClient() async {
-    ChatOptions options = ChatOptions(
-      appKey: appKey,
-      autoLogin: false,
-    );
-    agoraChatClient = ChatClient.getInstance;
-    await agoraChatClient.init(options);
-
-    await ChatClient.getInstance.startCallback();
-  }
-
-  void setupListeners() {
-    agoraChatClient.addConnectionEventHandler(
-      "CONNECTION_HANDLER",
-      ConnectionEventHandler(
-          onConnected: onConnected,
-          onDisconnected: onDisconnected,
-          onTokenWillExpire: onTokenWillExpire,
-          onTokenDidExpire: onTokenDidExpire),
-    );
-
-    agoraChatClient.chatManager.addEventHandler(
-      "MESSAGE_HANDLER",
-      ChatEventHandler(onMessagesReceived: onMessagesReceived),
-    );
-  }
-
-  void onMessagesReceived(List<ChatMessage> messages) {
-    for (var msg in messages) {
-      if (msg.body.type == MessageType.TXT) {
-        ChatTextMessageBody body = msg.body as ChatTextMessageBody;
-        displayMessage(body.content, false);
-        // showLog('${msg.body}');
-        showLog("Message from ${msg.from}");
-      } else {
-        String msgType = msg.body.type.name;
-        showLog("Received $msgType message, from ${msg.from}");
-      }
-    }
-  }
-
-  void onTokenWillExpire() {}
-  void onTokenDidExpire() {}
-  void onDisconnected() {}
-  void onConnected() {
-    showLog("Connected");
-  }
-
-  void joinLeave() async {
-    if (!isJoined) {
-      try {
-        await agoraChatClient.loginWithAgoraToken(userId, token);
-        showLog("Logged in successfully as $userId");
-        setState(() {
-          isJoined = true;
-        });
-      } on ChatError catch (e) {
-        if (e.code == 200) {
-          setState(() {
-            isJoined = true;
-          });
-        } else {
-          showLog("Login failed, code: ${e.code}, desc: ${e.description}");
-        }
-      }
-    } else {
-      try {
-        await agoraChatClient.logout(true);
-        showLog("Logged out successfully");
-        setState(() {
-          isJoined = false;
-        });
-      } on ChatError catch (e) {
-        showLog("Logout failed, code: ${e.code}, desc: ${e.description}");
-      }
-    }
-  }
-
-  void sendMessage() async {
-    if (recipientId.isEmpty || messageContent.isEmpty) {
-      showLog("Enter recipient user ID and type a message");
-      return;
-    }
-
-    var msg = ChatMessage.createTxtSendMessage(
-      targetId: recipientId,
-      content: messageContent,
-    );
-    ChatClient.getInstance.chatManager.addMessageEvent(
-      "UNIQUE_HANDLER_ID",
-      ChatMessageEvent(
-        onSuccess: (msgId, msg) {
-          print("on message succeed");
-        },
-        onProgress: (msgId, progress) {
-          print("on message progress");
-        },
-        onError: (msgId, msg, error) {
-          print(
-            "on message failed, code: ${error.code}, desc: ${error.description}",
-          );
-        },
-      ),
-    );
-    ChatClient.getInstance.chatManager.removeMessageEvent("UNIQUE_HANDLER_ID");
-    agoraChatClient.chatManager.sendMessage(msg);
-    displayMessage(messageContent, true);
-    messageBoxController.clear();
-  }
-
-  void displayMessage(String text, bool isSentMessage) {
-    messageList.add(Row(children: [
-      Expanded(
-        child: Align(
-          alignment:
-              isSentMessage ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            margin: EdgeInsets.fromLTRB(
-                (isSentMessage ? 50 : 0), 5, (isSentMessage ? 0 : 50), 5),
-            decoration: BoxDecoration(
-              color: isSentMessage
-                  ? const Color(0xFFDCF8C6)
-                  : const Color(0xFFFFFFFF),
-            ),
-            child: Text(text),
-          ),
-        ),
-      ),
-    ]));
-
-    setState(() {
-      scrollController.jumpTo(scrollController.position.maxScrollExtent + 50);
-    });
-  }
-
-  late ChatClient agoraChatClient;
-  bool isJoined = false;
-
-  ScrollController scrollController = ScrollController();
-  TextEditingController messageBoxController = TextEditingController();
-  String messageContent = "", recipientId = "";
-  final List<Widget> messageList = [];
-
-  showLog(String message) {
-    scaffoldMessengerKey.currentState?.showSnackBar(SnackBar(
-      content: Text(message),
-    ));
-  }
-
-  @override
-  void dispose() {
-    agoraChatClient.chatManager.removeEventHandler("MESSAGE_HANDLER");
-    agoraChatClient.removeConnectionEventHandler("CONNECTION_HANDLER");
-    super.dispose();
+    _addChatListener();
   }
 
   @override
@@ -210,76 +56,248 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.only(left: 10, right: 10),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.max,
           children: [
+            TextField(
+              decoration: const InputDecoration(hintText: "Enter username"),
+              onChanged: (username) => _userId = username,
+            ),
+            TextField(
+              decoration: const InputDecoration(hintText: "Enter password"),
+              onChanged: (password) => _password = password,
+            ),
+            const SizedBox(height: 10),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 Expanded(
-                  child: SizedBox(
-                    height: 40,
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        hintText: "Enter recipient's userId",
-                      ),
-                      onChanged: (chatUserId) => recipientId = chatUserId,
+                  flex: 1,
+                  child: TextButton(
+                    onPressed: _signIn,
+                    child: const Text("SIGN IN"),
+                    style: ButtonStyle(
+                      foregroundColor: MaterialStateProperty.all(Colors.white),
+                      backgroundColor:
+                          MaterialStateProperty.all(Colors.lightBlue),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
-                SizedBox(
-                  width: 80,
-                  height: 40,
-                  child: ElevatedButton(
-                    onPressed: joinLeave,
-                    child: Text(isJoined ? "Leave" : "Join"),
+                Expanded(
+                  child: TextButton(
+                    onPressed: _signOut,
+                    child: const Text("SIGN OUT"),
+                    style: ButtonStyle(
+                      foregroundColor: MaterialStateProperty.all(Colors.white),
+                      backgroundColor:
+                          MaterialStateProperty.all(Colors.lightBlue),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextButton(
+                    onPressed: _signUp,
+                    child: const Text("SIGN UP"),
+                    style: ButtonStyle(
+                      foregroundColor: MaterialStateProperty.all(Colors.white),
+                      backgroundColor:
+                          MaterialStateProperty.all(Colors.lightBlue),
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 10),
-            Expanded(
+            TextField(
+              decoration: const InputDecoration(
+                  hintText: "Enter the username you want to send"),
+              onChanged: (chatId) => _chatId = chatId,
+            ),
+            TextField(
+              decoration: const InputDecoration(hintText: "Enter content"),
+              onChanged: (msg) => _messageContent = msg,
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: _sendMessage,
+              child: const Text("SEND TEXT"),
+              style: ButtonStyle(
+                foregroundColor: MaterialStateProperty.all(Colors.white),
+                backgroundColor: MaterialStateProperty.all(Colors.lightBlue),
+              ),
+            ),
+            Flexible(
               child: ListView.builder(
                 controller: scrollController,
                 itemBuilder: (_, index) {
-                  return messageList[index];
+                  return Text(_logText[index]);
                 },
-                itemCount: messageList.length,
+                itemCount: _logText.length,
               ),
             ),
-            Row(children: [
-              Expanded(
-                child: SizedBox(
-                  height: 40,
-                  child: TextField(
-                    controller: messageBoxController,
-                    decoration: const InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      hintText: "Message",
-                    ),
-                    onChanged: (msg) {
-                      messageContent = msg;
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 50,
-                height: 40,
-                child: ElevatedButton(
-                  onPressed: sendMessage,
-                  child: const Text(">>"),
-                ),
-              ),
-            ]),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    ChatClient.getInstance.chatManager.removeMessageEvent("UNIQUE_HANDLER_ID");
+    ChatClient.getInstance.chatManager.removeEventHandler("UNIQUE_HANDLER_ID");
+    super.dispose();
+  }
+
+  void _addChatListener() {
+    ChatClient.getInstance.chatManager.addMessageEvent(
+        "UNIQUE_HANDLER_ID",
+        ChatMessageEvent(
+          onSuccess: (msgId, msg) {
+            _addLogToConsole("on message succeed");
+          },
+          onProgress: (msgId, progress) {
+            _addLogToConsole("on message progress");
+          },
+          onError: (msgId, msg, error) {
+            _addLogToConsole(
+              "on message failed, code: ${error.code}, desc: ${error.description}",
+            );
+          },
+        ));
+
+    ChatClient.getInstance.chatManager.addEventHandler(
+      "UNIQUE_HANDLER_ID",
+      ChatEventHandler(
+        onMessagesReceived: (messages) {
+          for (var msg in messages) {
+            switch (msg.body.type) {
+              case MessageType.TXT:
+                {
+                  ChatTextMessageBody body = msg.body as ChatTextMessageBody;
+                  _addLogToConsole(
+                    "receive text message: ${body.content}, from: ${msg.from}",
+                  );
+                }
+                break;
+              case MessageType.IMAGE:
+                {
+                  _addLogToConsole(
+                    "receive image message, from: ${msg.from}",
+                  );
+                }
+                break;
+              case MessageType.VIDEO:
+                {
+                  _addLogToConsole(
+                    "receive video message, from: ${msg.from}",
+                  );
+                }
+                break;
+              case MessageType.LOCATION:
+                {
+                  _addLogToConsole(
+                    "receive location message, from: ${msg.from}",
+                  );
+                }
+                break;
+              case MessageType.VOICE:
+                {
+                  _addLogToConsole(
+                    "receive voice message, from: ${msg.from}",
+                  );
+                }
+                break;
+              case MessageType.FILE:
+                {
+                  ChatClient.getInstance.chatManager.downloadAttachment(msg);
+                  _addLogToConsole(
+                    "receive file message, from: ${msg.from}",
+                  );
+                }
+                break;
+              case MessageType.CUSTOM:
+                {
+                  _addLogToConsole(
+                    "receive custom message, from: ${msg.from}",
+                  );
+                }
+                break;
+              case MessageType.CMD:
+                {
+                  // 当前回调中不会有 CMD 类型消息，CMD 类型消息通过 [ChatManagerEventHandle.onCmdMessagesReceived] 回调接收
+                }
+                break;
+            }
+          }
+        },
+      ),
+    );
+  }
+
+  void _signIn() async {
+    if (_userId.isEmpty || _password.isEmpty) {
+      _addLogToConsole("username or password is null");
+      return;
+    }
+
+    try {
+      await ChatClient.getInstance.login(_userId, _password);
+      _addLogToConsole("sign in succeed, username: $_userId");
+    } on ChatError catch (e) {
+      _addLogToConsole("sign in failed, e: ${e.code} , ${e.description}");
+    }
+  }
+
+  void _signOut() async {
+    try {
+      await ChatClient.getInstance.logout(true);
+      _addLogToConsole("sign out succeed");
+    } on ChatError catch (e) {
+      _addLogToConsole(
+          "sign out failed, code: ${e.code}, desc: ${e.description}");
+    }
+  }
+
+  void _signUp() async {
+    if (_userId.isEmpty || _password.isEmpty) {
+      _addLogToConsole("username or password is null");
+      return;
+    }
+
+    try {
+      await ChatClient.getInstance.createAccount(_userId, _password);
+      _addLogToConsole("sign up succeed, username: $_userId");
+    } on ChatError catch (e) {
+      _addLogToConsole("sign up failed, e: ${e.code} , ${e.description}");
+    }
+  }
+
+  void _sendMessage() async {
+    if (_chatId.isEmpty || _messageContent.isEmpty) {
+      _addLogToConsole("single chat id or message content is null");
+      return;
+    }
+
+    var msg = ChatMessage.createTxtSendMessage(
+      targetId: _chatId,
+      content: _messageContent,
+    );
+
+    ChatClient.getInstance.chatManager.sendMessage(msg);
+  }
+
+  void _addLogToConsole(String log) {
+    _logText.add(_timeString + ": " + log);
+    setState(() {
+      scrollController.jumpTo(scrollController.position.maxScrollExtent);
+    });
+  }
+
+  String get _timeString {
+    return DateTime.now().toString().split(".").first;
   }
 }
