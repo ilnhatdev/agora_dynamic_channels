@@ -1,3 +1,5 @@
+import 'package:agora_dynamic_channels/main1.dart';
+import 'package:agora_dynamic_channels/main2.dart';
 import 'package:flutter/material.dart';
 import 'package:agora_chat_sdk/agora_chat_sdk.dart';
 
@@ -21,7 +23,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter SDK Demo'),
+      home: const MyHomePage(title: 'Chat call video'),
     );
   }
 }
@@ -41,7 +43,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String _password = "";
   String _messageContent = "";
   String _chatId = "";
-  final List<String> _logText = [];
+  final List<Widget> _logText = [];
+  final TextEditingController? _txtMess = TextEditingController();
 
   @override
   void initState() {
@@ -118,23 +121,54 @@ class _MyHomePageState extends State<MyHomePage> {
               onChanged: (chatId) => _chatId = chatId,
             ),
             TextField(
+              controller: _txtMess,
               decoration: const InputDecoration(hintText: "Enter content"),
               onChanged: (msg) => _messageContent = msg,
             ),
             const SizedBox(height: 10),
-            TextButton(
-              onPressed: _sendMessage,
-              child: const Text("SEND TEXT"),
-              style: ButtonStyle(
-                foregroundColor: MaterialStateProperty.all(Colors.white),
-                backgroundColor: MaterialStateProperty.all(Colors.lightBlue),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: _sendMessage,
+                  child: const Text("SEND TEXT"),
+                  style: ButtonStyle(
+                    foregroundColor: MaterialStateProperty.all(Colors.white),
+                    backgroundColor:
+                        MaterialStateProperty.all(Colors.lightBlue),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CallVoice()),
+                  ),
+                  child: const Text("CALL VOICE"),
+                  style: ButtonStyle(
+                    foregroundColor: MaterialStateProperty.all(Colors.white),
+                    backgroundColor:
+                        MaterialStateProperty.all(Colors.lightBlue),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CallVideo()),
+                  ),
+                  child: const Text("CALL VIDEO"),
+                  style: ButtonStyle(
+                    foregroundColor: MaterialStateProperty.all(Colors.white),
+                    backgroundColor:
+                        MaterialStateProperty.all(Colors.lightBlue),
+                  ),
+                ),
+              ],
             ),
             Flexible(
               child: ListView.builder(
                 controller: scrollController,
                 itemBuilder: (_, index) {
-                  return Text(_logText[index]);
+                  return _logText[index];
                 },
                 itemCount: _logText.length,
               ),
@@ -157,16 +191,14 @@ class _MyHomePageState extends State<MyHomePage> {
         "UNIQUE_HANDLER_ID",
         ChatMessageEvent(
           onSuccess: (msgId, msg) {
-            _addLogToConsole("on message succeed");
+            // _addLogToConsole("on message succeed");
           },
           onProgress: (msgId, progress) {
-            _addLogToConsole("on message progress");
+            // _addLogToConsole("on message progress");
           },
-          onError: (msgId, msg, error) {
-            _addLogToConsole(
-              "on message failed, code: ${error.code}, desc: ${error.description}",
-            );
-          },
+          onError: (msgId, msg, error) {}, // _addLogToConsole(
+          //   "on message failed, code: ${error.code}, desc: ${error.description}",
+          // );
         ));
 
     ChatClient.getInstance.chatManager.addEventHandler(
@@ -178,9 +210,10 @@ class _MyHomePageState extends State<MyHomePage> {
               case MessageType.TXT:
                 {
                   ChatTextMessageBody body = msg.body as ChatTextMessageBody;
-                  _addLogToConsole(
-                    "receive text message: ${body.content}, from: ${msg.from}",
-                  );
+                  // _addLogToConsole(
+                  //   body.content,
+                  // );
+                  displayMessage(body.content, false);
                 }
                 break;
               case MessageType.IMAGE:
@@ -288,12 +321,40 @@ class _MyHomePageState extends State<MyHomePage> {
     );
 
     ChatClient.getInstance.chatManager.sendMessage(msg);
+    displayMessage(_messageContent, true);
+    // _addLogToConsole(_messageContent);
+    _txtMess!.clear();
   }
 
   void _addLogToConsole(String log) {
-    _logText.add(_timeString + ": " + log);
+    _logText.add(Text(log));
     setState(() {
       scrollController.jumpTo(scrollController.position.maxScrollExtent);
+    });
+  }
+
+  void displayMessage(String text, bool isSentMessage) {
+    _logText.add(Row(children: [
+      Expanded(
+        child: Align(
+          alignment:
+              isSentMessage ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            margin: EdgeInsets.fromLTRB(
+                (isSentMessage ? 50 : 0), 5, (isSentMessage ? 0 : 50), 5),
+            decoration: BoxDecoration(
+              color: isSentMessage
+                  ? const Color(0xFFDCF8C6)
+                  : const Color(0xFFFFFFFF),
+            ),
+            child: Text(text),
+          ),
+        ),
+      ),
+    ]));
+    setState(() {
+      scrollController.jumpTo(scrollController.position.maxScrollExtent + 50);
     });
   }
 
