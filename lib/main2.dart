@@ -16,7 +16,7 @@ class CallVoice extends StatefulWidget {
 class _CallVoiceState extends State<CallVoice> {
   String channelName = "nhat";
   String token =
-      "007eJxTYHj0TU1Lu4Rnr9S8n9FHd757u2v12wjhj7v++Hjb/raYmSOnwGCQZGJuYmSemmpubGxiYmieaGmQlmZklGySampsnmRgkfHSL7UhkJHB0+IoAyMUgvgsDHkZiSUMDADLJSCV";
+      "007eJxTYKi2rl+f+OuC5POed3p7tPMKrlbujJjB+fvq+fq9z7epGU9UYDBIMjE3MTJPTTU3NjYxMTRPtDRISzMySjZJNTU2TzKw+NkZmNoQyMiw0Y2blZEBAkF8Foa8jMQSBgYA5VEg5Q==";
 
   int uid = 0; // uid of the local user
 
